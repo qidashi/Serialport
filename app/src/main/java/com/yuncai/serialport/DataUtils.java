@@ -20,7 +20,11 @@ public class DataUtils {
     }
 
     public static String IntToHex(int intHex){
-        return Integer.toHexString(intHex);
+        String s = Integer.toHexString(intHex);
+        if(s!=null && s.length()==1){
+            s = "0"+s;
+        }
+        return s;
     }
 
     //-------------------------------------------------------
@@ -131,6 +135,19 @@ public class DataUtils {
         sum = DataUtils.twoByte(sum);
         cmd += sum;
         return cmd.toUpperCase();
+    }
+
+    /**
+     * 异或校验和
+     * @param data
+     * @return
+     */
+    public static byte getXor(byte[] data){
+        byte temp=data[0];
+        for (int i = 1; i <data.length; i++) {
+            temp ^=data[i];
+        }
+        return temp;
     }
 
 }

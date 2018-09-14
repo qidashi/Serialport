@@ -6,11 +6,15 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.yuncai.serialport.protocol.Pad2PhoneProtocol;
+
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import android_serialport_api.SerialPortFinder;
 
@@ -49,15 +53,24 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 // 3.发送指令
-                serialPortUtil.sendSerialPort(Cmd.OPEN_DOOR);
+
+                // 查询电话状态
+                List<String> data = new ArrayList<>();
+                data.add("01");
+                serialPortUtil.sendSerialPort(new Pad2PhoneProtocol("61","00",data).toString());
+                // 挂机
+//                List<String> data = new ArrayList<>();
+//                data.add("00");
+//                data.add("00");
+//                serialPortUtil.sendSerialPort(new Pad2PhoneProtocol("60","00",data).toString());
             }
+
         });
     }
 
     @SuppressWarnings("all")
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onEventMainThread(String string){
-        LogUtils.d("来自串口的数据："+string);
         tv.setText(string);
     }
 

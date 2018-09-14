@@ -1,5 +1,7 @@
 package com.yuncai.serialport;
 
+import android.os.SystemClock;
+import android.text.TextUtils;
 import android.util.Log;
 
 import org.greenrobot.eventbus.EventBus;
@@ -77,6 +79,7 @@ public class SerialPortUtil {
      * @param data 要发送的数据
      */
     public void sendSerialPort(String data) {
+        LogUtils.e("send data:"+data);
         try {
             byte[] sendData = DataUtils.HexToByteArr(data);
             outputStream.write(sendData);
@@ -99,25 +102,63 @@ public class SerialPortUtil {
     private class ReceiveThread extends Thread {
         @Override
         public void run() {
-            super.run();
+            String receiveCmd = "";
+            String HEAD = "A055";
+            StringBuilder sb = new StringBuilder();
             //条件判断，只要条件为true，则一直执行这个线程
             while (isStart) {
                 if (inputStream == null) {
                     return;
                 }
-                byte[] readData = new byte[1024];
+                byte[] readData = new byte[1024*4];
                 try {
-                    int size = inputStream.read(readData);
-                    if (size > 0) {
-                        String readString = DataUtils.ByteArrToHex(readData, 0, size);
-                        EventBus.getDefault().post(readString);
+                    // 为了一次性读完，做了延迟读取
+                    if (inputStream.available() > 0 ) {
+                        SystemClock.sleep(200);
+                        int size = inputStream.read(readData);
+                        if (size > 0) {
+                            String readString = DataUtils.ByteArrToHex(readData, 0, size);
+                            LogUtils.d(readString);
+                            if(!TextUtils.isEmpty(readString)){
+                                String[] split = readString.split(HEAD);
+                                for (int i = 1; i < split.length; i++) {
+                                    receiveCmd = HEAD+split[i];
+                                    if(checkSum(receiveCmd)){
+                                     sb.append(receiveCmd+"\n");
+                                    }
+                                    LogUtils.e(receiveCmd);
+                                }
+                            }
+                            EventBus.getDefault().post(sb.toString());
+                            sb.setLength(0);
+                        }
                     }
+
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
 
         }
+    }
+
+    /**
+     * CheckSum  异或校验接收数据的正确性
+     * @param receiveCmd
+     * @return
+     */
+    private boolean checkSum(String receiveCmd) {
+        String checkSum = receiveCmd.substring(receiveCmd.length() - 2);
+        byte checkSumByte = DataUtils.HexToByte(checkSum);
+        String substring = receiveCmd.substring(4).replaceAll(checkSum,"");
+        int len = substring.length();
+        byte temp= DataUtils.HexToByte(substring.substring(0,2));
+        for (int i = 2; i < len; i+=2) {// 04 51 00 00
+            String value = substring.substring(i, i + 2);
+            temp ^= DataUtils.HexToByte(value);
+        }
+        LogUtils.e("校验：CheckSum========"+checkSumByte+"++++++++++++"+temp);
+        return checkSumByte == temp;
     }
 
 }
